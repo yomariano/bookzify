@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200" height="300" viewBox="0 0 200 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="200" height="300" fill="#F3F4F6"/>
+  
+  <!-- Book icon -->
+  <path d="M60 100H140V200H60V100ZM130 110H70V190H130V110Z" fill="#9CA3AF"/>
+  <rect x="80" y="130" width="40" height="4" fill="#9CA3AF"/>
+  <rect x="80" y="140" width="40" height="4" fill="#9CA3AF"/>
+  <rect x="80" y="150" width="40" height="4" fill="#9CA3AF"/>
+  
+  <!-- Text -->
+  <text x="100" y="240" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#6B7280" text-anchor="middle">
+    No Cover
+  </text>
+</svg> 
