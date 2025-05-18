@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '@/lib/auth-context'
 import { createClient } from '@/lib/supabase'
 import { Book } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import Image from 'next/image'
@@ -12,8 +12,10 @@ import Image from 'next/image'
 export default function Dashboard() {
   const { user, profile, loading, signOut } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams() // Get query params (e.g., code)
   const [books, setBooks] = useState<Book[]>([])
   const [loadingBooks, setLoadingBooks] = useState(true)
+  const [sessionLoading, setSessionLoading] = useState(true) // Track session retrieval
   const supabase = createClient()
 
   const fetchBooks = useCallback(async () => {
@@ -35,19 +37,51 @@ export default function Dashboard() {
     }
   }, [supabase])
 
+  // Handle OAuth callback and session retrieval
   useEffect(() => {
-    if (!loading && !user) {
+    const handleOAuthCallback = async () => {
+      const code = searchParams.get('code')
+      if (code) {
+        console.log('OAuth code detected:', code)
+        try {
+          // Wait for Supabase to exchange the code and set the session
+          const { data, error } = await supabase.auth.getSession()
+          if (error) {
+            console.error('Error getting session:', error.message)
+            router.push('/signup')
+            return
+          }
+          if (!data.session) {
+            console.log('No session set after OAuth callback')
+            router.push('/signup')
+          }
+        } catch (error) {
+          console.error('Error during OAuth callback:', error)
+          router.push('/signup')
+        }
+      }
+      setSessionLoading(false) // Done checking session
+    }
+
+    handleOAuthCallback()
+  }, [searchParams, router, supabase])
+
+  // Redirect if not authenticated (after session check)
+  useEffect(() => {
+    if (!sessionLoading && !loading && !user) {
+      console.log('No user found, redirecting to signup')
       router.push('/signup')
     }
-  }, [user, loading, router])
+  }, [user, loading, sessionLoading, router])
 
+  // Fetch books once user is confirmed
   useEffect(() => {
     if (user) {
       fetchBooks()
     }
   }, [user, fetchBooks])
 
-  if (loading) {
+  if (loading || sessionLoading) {
     return <div>Loading...</div>
   }
 
@@ -105,4 +139,4 @@ export default function Dashboard() {
       </div>
     </div>
   )
-} 
+}

@@ -12,53 +12,53 @@ export interface Database {
       profiles: {
         Row: {
           id: string
-          full_name: string | null
-          avatar_url: string | null
-          email: string | null
-          created_at: string
-          updated_at: string
+          created_at?: string
+          updated_at?: string
+          email?: string
+          full_name?: string
+          avatar_url?: string
         }
         Insert: {
           id: string
-          full_name?: string | null
-          avatar_url?: string | null
-          email?: string | null
           created_at?: string
           updated_at?: string
+          email?: string
+          full_name?: string
+          avatar_url?: string
         }
         Update: {
           id?: string
-          full_name?: string | null
-          avatar_url?: string | null
-          email?: string | null
           created_at?: string
           updated_at?: string
+          email?: string
+          full_name?: string
+          avatar_url?: string
         }
       }
       books: {
         Row: {
           id: string
+          created_at?: string
+          updated_at?: string
           name: string
           url: string
           user_id: string
-          created_at: string
-          updated_at: string
         }
         Insert: {
           id?: string
+          created_at?: string
+          updated_at?: string
           name: string
           url: string
           user_id: string
-          created_at?: string
-          updated_at?: string
         }
         Update: {
           id?: string
+          created_at?: string
+          updated_at?: string
           name?: string
           url?: string
           user_id?: string
-          created_at?: string
-          updated_at?: string
         }
       }
     }

@@ -10,10 +10,16 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 export const createClient = () => {
-  // Type assertion is safe here because we checked above
   return createBrowserClient<Database>(
-    supabaseUrl as string,
-    supabaseKey as string
+    supabaseUrl,
+    supabaseKey,
+    {
+      auth: {
+        persistSession: true,
+        storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+        autoRefreshToken: true,
+      },
+    }
   )
 }
 
