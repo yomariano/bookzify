@@ -7,11 +7,15 @@ import type { NextRequest } from 'next/server'
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
+  
+  console.log('Auth callback triggered. URL:', request.url)
+  console.log('Auth code present:', !!code)
 
   if (code) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const cookieStore = cookies() as any; // Type assertion to any as a temporary workaround
 
+    console.log('Creating Supabase client for code exchange...')
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -30,13 +34,17 @@ export async function GET(request: NextRequest) {
       }
     )
 
+    console.log('Exchanging code for session...')
     const { error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error) {
+      console.log('Session exchange successful, redirecting to dashboard')
       return NextResponse.redirect(`${requestUrl.origin}/dashboard`)
     }
+    
+    console.error('Session exchange error:', error)
   }
 
-  // Return the user to an error page with some instructions
+  console.log('Auth callback failed, redirecting to error page')
   return NextResponse.redirect(`${requestUrl.origin}/auth-error`)
 } 

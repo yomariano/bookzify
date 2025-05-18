@@ -27,6 +27,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const getProfile = useCallback(async (userId: string) => {
     try {
+      console.log('Fetching user profile for ID:', userId)
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -34,9 +35,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .single()
 
       if (error) {
+        console.error('Error fetching profile:', error)
         throw error
       }
 
+      console.log('Profile fetched successfully:', data)
       setProfile(data)
     } catch (error) {
       console.error('Error loading profile:', error)
@@ -44,8 +47,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [supabase])
 
   useEffect(() => {
+    console.log('Checking active session...')
     // Check active sessions and sets the user
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', { hasSession: !!session })
       setUser(session?.user ?? null)
       if (session?.user) {
         getProfile(session.user.id)
@@ -55,6 +60,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Listen for changes on auth state (signed in, signed out, etc.)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', { event, hasSession: !!session })
       setUser(session?.user ?? null)
       if (session?.user) {
         await getProfile(session.user.id)
@@ -70,9 +76,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [getProfile, supabase.auth])
 
   const signOut = async () => {
+    console.log('Signing out...')
     await supabase.auth.signOut()
     setUser(null)
     setProfile(null)
+    console.log('Sign out completed')
   }
 
   return (

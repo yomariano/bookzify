@@ -16,11 +16,16 @@ export default function SignUp() {
 
   const handleGoogleSignIn = async () => {
     try {
+      console.log('Starting Google sign-in process...')
       setLoading(true)
+
+      const redirectToUrl = `${window.location.origin}/dashboard`;
+      console.log('Attempting to redirect to:', redirectToUrl); // Log the URL
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`,
+          redirectTo: redirectToUrl, // Use the logged variable
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -28,10 +33,15 @@ export default function SignUp() {
         },
       })
 
-      if (error) throw error
+      if (error) {
+        console.error('Google sign-in error:', error)
+        throw error
+      }
+      console.log('Google sign-in initiated successfully')
     } catch (error) {
       console.error('Error signing in with Google:', error)
     } finally {
+      console.log('Google sign-in flow completed. Redirect URL:', `${window.location.origin}/dashboard`)
       setLoading(false)
     }
   }
