@@ -1,27 +1,30 @@
-import { createServerClient } from '@supabase/ssr'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import type { CookieOptions } from '@supabase/ssr'
+// import type { CookieOptions } from '@supabase/ssr' // This line seems to be causing issues with CookieOptions below, let's see if it's needed. It might be re-declared by createServerClient or NextRequest
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
 
   if (code) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cookieStore = cookies() as any; // Type assertion to any as a temporary workaround
+
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
           get(name: string) {
-            return cookies().get(name)?.value
+            return cookieStore.get(name)?.value
           },
           set(name: string, value: string, options: CookieOptions) {
-            cookies().set(name, value, options)
+            cookieStore.set(name, value, options)
           },
           remove(name: string, options: CookieOptions) {
-            cookies().delete(name)
+            cookieStore.delete(name, options)
           },
         },
       }

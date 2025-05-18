@@ -4,6 +4,8 @@ import { BookVolume } from '@/app/types/book-volume';
 import { X, Book, Globe, FileText, Share } from 'lucide-react';
 import { Button } from './ui/button';
 import { DownloadButton } from './DownloadButton';
+import Image from 'next/image';
+import { useState } from 'react';
 
 interface BookDetailProps {
   book: BookVolume;
@@ -22,6 +24,7 @@ export function BookDetail({ book, onClose }: BookDetailProps) {
   const categories = book.volumeInfo?.categories?.join(', ') || book.category || 'Unknown';
   const thumbnail = book.volumeInfo?.imageLinks?.thumbnail || '';
   const downloadUrl = book.downloadUrl;
+  const [imageError, setImageError] = useState(false);
 
   return (
     <div className="fixed inset-0 bg-black/95 z-50 overflow-y-auto">
@@ -42,15 +45,20 @@ export function BookDetail({ book, onClose }: BookDetailProps) {
           
           <div className="flex flex-col md:flex-row gap-8">
             {/* Book cover */}
-            <div className="flex-shrink-0 mb-6 md:mb-0">
-              {thumbnail ? (
-                <img 
-                  src={thumbnail.replace('http:', 'https:')} 
-                  alt={title}
-                  className="w-full md:w-64 h-auto shadow-lg rounded-md object-cover"
-                />
+            <div className="flex-shrink-0 mb-6 md:mb-0 md:w-64">
+              {thumbnail && !imageError ? (
+                <div className="relative w-full h-96 md:h-auto md:aspect-[2/3]">
+                  <Image 
+                    src={thumbnail.replace('http:', 'https:')} 
+                    alt={title}
+                    fill
+                    className="shadow-lg rounded-md object-cover"
+                    onError={() => setImageError(true)}
+                    sizes="(max-width: 768px) 100vw, 256px"
+                  />
+                </div>
               ) : (
-                <div className="w-full md:w-64 h-96 bg-gray-800 flex items-center justify-center rounded-md">
+                <div className="w-full h-96 bg-gray-800 flex items-center justify-center rounded-md md:w-64">
                   <Book size={64} className="text-gray-600" />
                 </div>
               )}

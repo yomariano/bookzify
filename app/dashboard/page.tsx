@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '@/lib/auth-context'
 import { createClient } from '@/lib/supabase'
 import { Book } from '@/lib/supabase'
@@ -16,19 +16,7 @@ export default function Dashboard() {
   const [loadingBooks, setLoadingBooks] = useState(true)
   const supabase = createClient()
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/signup')
-    }
-  }, [user, loading, router])
-
-  useEffect(() => {
-    if (user) {
-      fetchBooks()
-    }
-  }, [user])
-
-  const fetchBooks = async () => {
+  const fetchBooks = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('books')
@@ -45,7 +33,19 @@ export default function Dashboard() {
     } finally {
       setLoadingBooks(false)
     }
-  }
+  }, [supabase])
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/signup')
+    }
+  }, [user, loading, router])
+
+  useEffect(() => {
+    if (user) {
+      fetchBooks()
+    }
+  }, [user, fetchBooks])
 
   if (loading) {
     return <div>Loading...</div>

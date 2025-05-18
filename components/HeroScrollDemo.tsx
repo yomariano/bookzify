@@ -4,6 +4,7 @@ import { ContainerScroll } from "../components/ui/container-scroll-animation";
 import { Button } from "@/components/ui/button";
 import { Book, Headphones, FileText, Globe, Award, Bookmark } from "lucide-react";
 import Link from "next/link";
+import Image from 'next/image';
 
 export function HeroScrollDemo() {
   return (
@@ -34,11 +35,13 @@ export function HeroScrollDemo() {
         }
       >
         <div className="grid grid-cols-1 md:grid-cols-2 h-full">
-          <div className="h-full flex items-center justify-center overflow-hidden">
-            <img
+          <div className="h-full flex items-center justify-center overflow-hidden relative">
+            <Image
               src="https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=1400&q=80"
               alt="Digital Library"
+              fill
               className="object-cover h-full w-full"
+              priority
             />
           </div>
           <div className="h-full bg-secondary/20 backdrop-blur-sm p-4 sm:p-6 md:p-10 flex flex-col justify-center">

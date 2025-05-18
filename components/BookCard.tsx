@@ -5,6 +5,8 @@ import { Card, CardContent, CardFooter } from './ui/card';
 import { Button } from './ui/button';
 import { Book } from '@/app/types/book';
 import { AspectRatio } from "@/components/ui/aspect-ratio";
+import Image from 'next/image';
+import { useState } from 'react';
 
 interface BookCardProps {
   book: Book | BookVolume;
@@ -17,6 +19,7 @@ export function BookCard({ book, onSelect }: BookCardProps) {
   const authors = 'volumeInfo' in book 
     ? (book.volumeInfo.authors || []).join(', ') 
     : book.author;
+  const [imageError, setImageError] = useState(false);
 
   // Handle cover image URL correctly for both types
   const coverImageUrl = 'volumeInfo' in book 
@@ -52,14 +55,15 @@ export function BookCard({ book, onSelect }: BookCardProps) {
   return (
     <Card className="h-full flex flex-col hover:shadow-lg transition-shadow group">
       <div className="overflow-hidden rounded-t-lg bg-gray-100 relative">
-        {imageUrl ? (
+        {imageUrl && !imageError ? (
           <AspectRatio ratio={2/3} className="bg-secondary">
-          <img
+          <Image
             src={imageUrl}
             alt={title}
+            fill
             className="object-cover w-full h-full rounded-t-md transition-transform group-hover:scale-105"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = "/placeholder.svg";
+            onError={() => {
+              setImageError(true);
             }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end">
@@ -69,9 +73,9 @@ export function BookCard({ book, onSelect }: BookCardProps) {
           </div>
         </AspectRatio>
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gray-200">
-            <span className="text-gray-400 text-xs">No Cover</span>
-          </div>
+          <AspectRatio ratio={2/3} className="bg-secondary flex items-center justify-center">
+            <Image src="/placeholder.svg" alt="Placeholder" width={50} height={75} />
+          </AspectRatio>
         )}
       </div>
       <CardContent className="flex-1 p-3">

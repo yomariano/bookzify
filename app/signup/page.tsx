@@ -3,13 +3,15 @@
 import { useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { createClient } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+// import { useRouter } from 'next/navigation' // Removed unused import
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { FcGoogle } from 'react-icons/fc'
+import { useAuth } from '@/lib/auth-context' // Corrected import path
 
 export default function SignUp() {
-  const router = useRouter()
-  const [loading, setLoading] = useState(false)
+  // const router = useRouter() // Original line, router is unused
+  useAuth() // Calling useAuth() to see if it's needed, removed unused destructuring
+  const [loading, setLoading] = useState(false) // Reinstated local loading state
   const supabase = createClient()
 
   const handleGoogleSignIn = async () => {

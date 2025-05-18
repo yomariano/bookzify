@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { User } from '@supabase/supabase-js'
 import { createClient } from './supabase'
 import { Profile } from './supabase'
@@ -24,6 +24,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
+
+  const getProfile = useCallback(async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single()
+
+      if (error) {
+        throw error
+      }
+
+      setProfile(data)
+    } catch (error) {
+      console.error('Error loading profile:', error)
+    }
+  }, [supabase])
 
   useEffect(() => {
     // Check active sessions and sets the user
@@ -49,25 +67,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       subscription.unsubscribe()
     }
-  }, [])
-
-  const getProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single()
-
-      if (error) {
-        throw error
-      }
-
-      setProfile(data)
-    } catch (error) {
-      console.error('Error loading profile:', error)
-    }
-  }
+  }, [getProfile, supabase.auth])
 
   const signOut = async () => {
     await supabase.auth.signOut()

@@ -139,7 +139,6 @@ export function DownloadButton({ url, title, bookId, format = 'PDF' }: DownloadB
 
       performDownload();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [downloadState, url, title, bookId, format, toast]); // Dependencies for the download effect
 
   const cleanupDOMElements = () => {
