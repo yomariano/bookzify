@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useAuth } from '@/lib/auth-context'
 import { createClient } from '@/lib/supabase'
 import { Book } from '@/lib/supabase'
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import Image from 'next/image'
 
-export default function Dashboard() {
+function DashboardPageContent() {
   const { user, profile, loading, signOut } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams() // Get query params (e.g., code)
@@ -138,5 +138,13 @@ export default function Dashboard() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function Dashboard() {
+  return (
+    <Suspense fallback={<div>Loading page...</div>}>
+      <DashboardPageContent />
+    </Suspense>
   )
 }
