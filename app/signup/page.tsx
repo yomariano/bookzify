@@ -3,29 +3,26 @@
 import { useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { createClient } from '@/lib/supabase'
-// import { useRouter } from 'next/navigation' // Removed unused import
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { FcGoogle } from 'react-icons/fc'
-import { useAuth } from '@/lib/auth-context' // Corrected import path
+import { useToast } from '@/components/ui/use-toast'
 
 export default function SignUp() {
-  // const router = useRouter() // Original line, router is unused
-  useAuth() // Calling useAuth() to see if it's needed, removed unused destructuring
-  const [loading, setLoading] = useState(false) // Reinstated local loading state
+  const { toast } = useToast()
+  const [loading, setLoading] = useState(false)
   const supabase = createClient()
 
   const handleGoogleSignIn = async () => {
     try {
-      console.log('Starting Google sign-in process...')
       setLoading(true)
-
-      const redirectToUrl = `${window.location.origin}/dashboard`;
-      console.log('Attempting to redirect to:', redirectToUrl); // Log the URL
-
+      
+      // Generate the redirect URL with the current origin
+      const redirectTo = `${window.location.origin}/auth/callback`
+      console.log('Redirecting to:', redirectTo)
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: redirectToUrl, // Use the logged variable
+          redirectTo,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -34,36 +31,46 @@ export default function SignUp() {
       })
 
       if (error) {
-        console.error('Google sign-in error:', error)
+        toast({
+          title: "Authentication error",
+          description: error.message,
+          variant: "destructive",
+        })
         throw error
       }
-      console.log('Google sign-in initiated successfully')
+      
+      // The user will be redirected to Google for authentication
+      // After successful auth, they'll be redirected back to our callback URL
     } catch (error) {
       console.error('Error signing in with Google:', error)
+      toast({
+        title: "Sign in failed",
+        description: "There was a problem signing in with Google. Please try again.",
+        variant: "destructive",
+      })
     } finally {
-      console.log('Google sign-in flow completed. Redirect URL:', `${window.location.origin}/dashboard`)
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50 dark:bg-slate-900">
+      <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Create your account</CardTitle>
+          <CardTitle className="text-2xl font-bold">Welcome to BookHub</CardTitle>
           <CardDescription>
-            Get started with BookHub today
+            Your personal library in the cloud
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Button 
             variant="outline" 
-            className="w-full" 
+            className="w-full py-6 text-base font-medium" 
             onClick={handleGoogleSignIn}
             disabled={loading}
           >
             <FcGoogle className="mr-2 h-5 w-5" />
-            {loading ? 'Signing in...' : 'Continue with Google'}
+            {loading ? 'Connecting...' : 'Continue with Google'}
           </Button>
         </CardContent>
         <CardFooter className="flex flex-col space-y-2">

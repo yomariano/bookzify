@@ -1,89 +1,40 @@
-import { createServerClient } from '@supabase/ssr'
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
-import type { CookieOptions } from '@supabase/ssr'
+import { NextRequest, NextResponse } from 'next/server'
+import { createServerClient } from '@/lib/supabase'
 
-// Ensure environment variables are available
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+// Define public routes that don't require authentication
+const publicRoutes = ['/signup', '/auth/callback']
 
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing Supabase environment variables. Check .env.local file.')
-}
-
-export async function middleware(req: NextRequest) {
-  console.log('Middleware executing for path:', req.nextUrl.pathname)
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
   
-  const res = NextResponse.next()
+  // Check if the route is public
+  if (publicRoutes.some(route => pathname.startsWith(route))) {
+    return NextResponse.next()
+  }
   
-  // Type assertion is safe here because we checked above
-  const supabase = createServerClient(
-    supabaseUrl as string,
-    supabaseKey as string,
-    {
-      cookies: {
-        get(name: string) {
-          return req.cookies.get(name)?.value
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          req.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-          res.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-        },
-        remove(name: string, options: CookieOptions) {
-          req.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
-          res.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
-        },
-      },
-    }
-  )
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  console.log('Session check result:', {
-    hasSession: !!session,
-    path: req.nextUrl.pathname,
-    isProtectedRoute: req.nextUrl.pathname.startsWith('/dashboard'),
-    isAuthPage: req.nextUrl.pathname === '/signup' || req.nextUrl.pathname === '/login'
-  })
-
-  // If there's no session and the user is trying to access a protected route
-  if (!session && req.nextUrl.pathname.startsWith('/dashboard')) {
-    console.log('No session, redirecting to signup')
-    const redirectUrl = req.nextUrl.clone()
-    redirectUrl.pathname = '/signup'
-    return NextResponse.redirect(redirectUrl)
+  // For API routes, let them handle their own auth
+  if (pathname.includes('/api/')) {
+    return NextResponse.next()
   }
 
-  // If there's a session and the user is trying to access auth pages
-  if (session && (req.nextUrl.pathname === '/signup' || req.nextUrl.pathname === '/login')) {
-    console.log('Session exists, redirecting to dashboard')
-    const redirectUrl = req.nextUrl.clone()
-    redirectUrl.pathname = '/dashboard'
-    return NextResponse.redirect(redirectUrl)
+  // Create a Supabase client
+  const supabase = createServerClient()
+  
+  // Check if user is authenticated
+  const { data: { session } } = await supabase.auth.getSession()
+  
+  // If no session and trying to access protected route, redirect to signup
+  if (!session && !publicRoutes.some(route => pathname.startsWith(route))) {
+    return NextResponse.redirect(new URL('/signup', request.url))
   }
-
-  console.log('Middleware completed, proceeding with request')
-  return res
+  
+  return NextResponse.next()
 }
 
+// Specify which paths this middleware should run for
 export const config = {
-  matcher: ['/dashboard/:path*', '/signup', '/login']
+  matcher: [
+    // Match all request paths except for _next, static, public, and api/auth
+    '/((?!_next|static|public|favicon.ico).*)',
+  ],
 } 

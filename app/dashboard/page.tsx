@@ -1,78 +1,49 @@
 "use client"
 
-import { useEffect, useState, useCallback, Suspense } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '@/lib/auth-context'
 import { createClient } from '@/lib/supabase'
 import { Book } from '@/lib/supabase'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import Image from 'next/image'
+import { Skeleton } from '@/components/ui/skeleton'
 
-function DashboardPageContent() {
+export default function Dashboard() {
   const { user, profile, loading, signOut } = useAuth()
   const router = useRouter()
-  const searchParams = useSearchParams() // Get query params (e.g., code)
   const [books, setBooks] = useState<Book[]>([])
   const [loadingBooks, setLoadingBooks] = useState(true)
-  const [sessionLoading, setSessionLoading] = useState(true) // Track session retrieval
   const supabase = createClient()
 
   const fetchBooks = useCallback(async () => {
+    if (!user) return
+    
     try {
+      setLoadingBooks(true)
       const { data, error } = await supabase
         .from('books')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
 
-      if (error) {
-        throw error
-      }
-
+      if (error) throw error
       setBooks(data || [])
     } catch (error) {
       console.error('Error fetching books:', error)
     } finally {
       setLoadingBooks(false)
     }
-  }, [supabase])
+  }, [supabase, user])
 
-  // Handle OAuth callback and session retrieval
+  // Redirect if not authenticated
   useEffect(() => {
-    const handleOAuthCallback = async () => {
-      const code = searchParams.get('code')
-      if (code) {
-        console.log('OAuth code detected:', code)
-        try {
-          // Wait for Supabase to exchange the code and set the session
-          const { data, error } = await supabase.auth.getSession()
-          if (error) {
-            console.error('Error getting session:', error.message)
-            router.push('/signup')
-            return
-          }
-          if (!data.session) {
-            console.log('No session set after OAuth callback')
-            router.push('/signup')
-          }
-        } catch (error) {
-          console.error('Error during OAuth callback:', error)
-          router.push('/signup')
-        }
-      }
-      setSessionLoading(false) // Done checking session
-    }
-
-    handleOAuthCallback()
-  }, [searchParams, router, supabase])
-
-  // Redirect if not authenticated (after session check)
-  useEffect(() => {
-    if (!sessionLoading && !loading && !user) {
-      console.log('No user found, redirecting to signup')
+    debugger
+    if (!loading && !user) {
       router.push('/signup')
     }
-  }, [user, loading, sessionLoading, router])
+  }, [user, loading, router])
 
   // Fetch books once user is confirmed
   useEffect(() => {
@@ -81,70 +52,118 @@ function DashboardPageContent() {
     }
   }, [user, fetchBooks])
 
-  if (loading || sessionLoading) {
-    return <div>Loading...</div>
+  if (loading) {
+    return <DashboardSkeleton />
   }
 
-  if (!user) {
-    return null
-  }
+  if (!user) return null
 
   return (
-    <div className="min-h-screen p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen p-4 sm:p-6 lg:p-8 bg-slate-50 dark:bg-slate-900">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center space-x-4">
-            {profile?.avatar_url && (
-              <Image
-                src={profile.avatar_url}
-                alt={profile.full_name || ''}
-                width={48}
-                height={48}
-                className="rounded-full"
-              />
-            )}
-            <div>
-              <h1 className="text-2xl font-bold">Welcome, {profile?.full_name}</h1>
-              <p className="text-muted-foreground">{profile?.email}</p>
+        <header className="bg-white dark:bg-slate-800 rounded-lg shadow p-4 mb-8">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-4">
+              {profile?.avatar_url && (
+                <div className="h-12 w-12 rounded-full overflow-hidden relative">
+                  <Image
+                    src={profile.avatar_url}
+                    alt={profile.full_name || ''}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              )}
+              <div>
+                <h1 className="text-2xl font-bold">Welcome, {profile?.full_name || user.email}</h1>
+                <p className="text-muted-foreground">{profile?.email || user.email}</p>
+              </div>
             </div>
+            <Button onClick={signOut} variant="outline">Sign Out</Button>
           </div>
-          <Button onClick={signOut}>Sign Out</Button>
-        </div>
+        </header>
 
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <section>
+          <h2 className="text-xl font-semibold mb-4">Your Library</h2>
           {loadingBooks ? (
-            <p>Loading books...</p>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="overflow-hidden">
+                  <CardHeader>
+                    <Skeleton className="h-4 w-3/4" />
+                  </CardHeader>
+                  <CardContent>
+                    <Skeleton className="aspect-[3/4] w-full" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           ) : books.length === 0 ? (
-            <p>No books found. Start adding some!</p>
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-8 text-center">
+              <h3 className="text-lg font-medium mb-2">No books found</h3>
+              <p className="text-muted-foreground mb-4">Start adding some books to your library</p>
+              <Button onClick={() => router.push('/library')}>Browse Library</Button>
+            </div>
           ) : (
-            books.map((book) => (
-              <Card key={book.id}>
-                <CardHeader>
-                  <CardTitle>{book.name}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="aspect-[3/4] relative rounded-md overflow-hidden">
-                    <Image
-                      src={book.url}
-                      alt={book.name}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {books.map((book) => (
+                <Card key={book.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <CardTitle className="truncate">{book.name}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="aspect-[3/4] relative rounded-md overflow-hidden">
+                      <Image
+                        src={book.url}
+                        alt={book.name}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           )}
-        </div>
+        </section>
       </div>
     </div>
   )
 }
 
-export default function Dashboard() {
+function DashboardSkeleton() {
   return (
-    <Suspense fallback={<div>Loading page...</div>}>
-      <DashboardPageContent />
-    </Suspense>
+    <div className="min-h-screen p-4 sm:p-6 lg:p-8 bg-slate-50 dark:bg-slate-900">
+      <div className="max-w-7xl mx-auto">
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4 mb-8">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-4">
+              <Skeleton className="h-12 w-12 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-6 w-48" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+            </div>
+            <Skeleton className="h-10 w-24" />
+          </div>
+        </div>
+        
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-36" />
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="overflow-hidden">
+                <CardHeader>
+                  <Skeleton className="h-4 w-3/4" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="aspect-[3/4] w-full" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
