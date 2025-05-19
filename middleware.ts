@@ -23,8 +23,8 @@ export async function middleware(request: NextRequest) {
   // Check if user is authenticated
   const { data: { session } } = await supabase.auth.getSession()
   
-  // If no session and trying to access protected route, redirect to signup
-  if (!session && !publicRoutes.some(route => pathname.startsWith(route))) {
+  // If no session and trying to access a protected route, redirect to signup
+  if (!session) { // Simplified condition
     return NextResponse.redirect(new URL('/signup', request.url))
   }
   
