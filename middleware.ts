@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 
 // Define public routes that don't require authentication
-const publicRoutes = ['/signup', '/auth/callback']
+const publicRoutes = [
+  '/signup',
+  '/auth/callback',
+  '/auth/v1/callback'  // Add Supabase's auth callback path
+]
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -20,15 +24,24 @@ export async function middleware(request: NextRequest) {
   // Create a Supabase client
   const supabase = createServerClient()
   
-  // Check if user is authenticated
-  const { data: { session } } = await supabase.auth.getSession()
-  
-  // If no session and trying to access a protected route, redirect to signup
-  if (!session) { // Simplified condition
+  try {
+    // Check if user is authenticated
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    // If no session and trying to access a protected route, redirect to signup
+    if (!session) {
+      const redirectUrl = new URL('/signup', request.url)
+      // Preserve the original URL as a parameter to redirect back after auth
+      redirectUrl.searchParams.set('redirectTo', request.url)
+      return NextResponse.redirect(redirectUrl)
+    }
+    
+    return NextResponse.next()
+  } catch (error) {
+    // If there's an error checking the session, redirect to signup as a fallback
+    console.error('Auth middleware error:', error)
     return NextResponse.redirect(new URL('/signup', request.url))
   }
-  
-  return NextResponse.next()
 }
 
 // Specify which paths this middleware should run for
