@@ -1,21 +1,13 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 
-export default function AuthErrorPage() {
+function AuthErrorContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const errorMessage = searchParams.get('message') || 'An unexpected error occurred during authentication.';
-
-  useEffect(() => {
-    // Optional: redirect after a delay if needed, or let user click a button
-    // const timer = setTimeout(() => {
-    //   router.push('/');
-    // }, 5000);
-    // return () => clearTimeout(timer);
-  }, [router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
@@ -27,5 +19,19 @@ export default function AuthErrorPage() {
         </Button>
       </div>
     </div>
+  );
+}
+
+export default function AuthErrorPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="p-8 bg-card rounded-lg shadow-md text-center max-w-md mx-auto">
+          <h1 className="text-2xl font-bold mb-4">Loading...</h1>
+        </div>
+      </div>
+    }>
+      <AuthErrorContent />
+    </Suspense>
   );
 } 
