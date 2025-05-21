@@ -93,7 +93,7 @@ export function DownloadButton({ url, title, bookId, format = 'PDF' }: DownloadB
           cleanupDOMElements();
           console.log('Downloading...');
           // Send POST request to the download endpoint
-          const response = await fetch('http://localhost:8000/download', {
+          const response = await fetch('http://bookzify.xyz/download', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
