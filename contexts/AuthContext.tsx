@@ -1,9 +1,7 @@
-'use client';
-
+"use client"
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import { AuthContextType, AuthState } from '@/types/auth';
-import type { Session, AuthChangeEvent } from '@supabase/supabase-js'; // Import Session and AuthChangeEvent
+import { supabase } from '../lib/supabase';
+import { AuthContextType, AuthState } from '../types/auth';
 
 const initialState: AuthState = {
   user: null,
@@ -15,79 +13,161 @@ const initialState: AuthState = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  console.log('[AuthProvider][Init] Component mounting with initial state:', JSON.stringify(initialState, null, 2));
   const [state, setState] = useState<AuthState>(initialState);
 
   useEffect(() => {
-    let isEffectActive = true;
+    console.log('[AuthProvider][Effect] Auth effect starting, setting up listeners and checking session');
+    let isEffectActive = true; // For cleanup tracking
 
+    // Check for active session on mount
     const checkSession = async () => {
+      console.log('[AuthProvider][Session] Beginning session check');
+      console.log('[AuthProvider][Session] Current state before check:', JSON.stringify(state, null, 2));
+      
       try {
-        // Type annotation for the destructured session
+        console.log('[AuthProvider][Session] Calling supabase.auth.getSession()');
         const { data: { session }, error } = await supabase.auth.getSession();
         
-        if (!isEffectActive) return;
+        if (!isEffectActive) {
+          console.log('[AuthProvider][Session] Effect cleanup occurred during session check, aborting');
+          return;
+        }
 
         if (error) {
-          console.error('[AuthProvider][Error] Error getting session:', {
+          console.error('[AuthProvider][Session] Error getting session:', {
             errorMessage: error.message,
-            // errorCode: error.code, // .code might not exist on all error types
-            // errorStatus: error.status, // .status might not exist on all error types
+            errorCode: error.code,
+            errorStatus: error.status,
             stack: error.stack
           });
           throw error;
         }
+        
+        const sessionDetails = session ? {
+          userId: session.user?.id,
+          userEmail: session.user?.email,
+          expiresAt: session.expires_at,
+          providerToken: !!session.provider_token,
+          accessToken: !!session.access_token,
+        } : null;
 
-        setState((prev) => ({
-          ...prev,
-          user: session?.user ?? null, // Ensure user is explicitly null if session.user is undefined
-          session,
-          isLoading: false,
-        }));
+        console.log('[AuthProvider][Session] Session check complete:', {
+          hasSession: !!session,
+          sessionDetails,
+          timestamp: new Date().toISOString(),
+        });
+
+        setState((prev) => {
+          const newState = {
+            ...prev,
+            user: session?.user || null,
+            session,
+            isLoading: false,
+          };
+          console.log('[AuthProvider][State] Updating state after session check:', {
+            prevState: JSON.stringify(prev, null, 2),
+            newState: JSON.stringify(newState, null, 2),
+            changes: {
+              userChanged: prev.user?.id !== newState.user?.id,
+              sessionChanged: prev.session?.access_token !== newState.session?.access_token,
+              loadingChanged: prev.isLoading !== newState.isLoading,
+            }
+          });
+          return newState;
+        });
       } catch (error) {
-        console.error('[AuthProvider][Error] Session check failed:', {
+        console.error('[AuthProvider][Session] Session check failed:', {
           error,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          currentState: JSON.stringify(state, null, 2)
         });
         
         if (!isEffectActive) return;
         
-        setState((prev) => ({
-          ...prev,
-          error: error as Error,
-          isLoading: false,
-        }));
+        setState((prev) => {
+          const newState = {
+            ...prev,
+            error: error as Error,
+            isLoading: false,
+          };
+          console.log('[AuthProvider][State] Updating state after session error:', {
+            prevState: JSON.stringify(prev, null, 2),
+            newState: JSON.stringify(newState, null, 2)
+          });
+          return newState;
+        });
       }
     };
 
     checkSession();
 
+    // Set up listener for auth changes
+    console.log('[AuthProvider][Listener] Setting up auth state change listener');
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      // Add types for _event and session
-      (_event: AuthChangeEvent, session: Session | null) => {
-        if (!isEffectActive) return;
-        setState((prev) => ({
-          ...prev,
-          user: session?.user ?? null, // Ensure user is explicitly null if session.user is undefined
-          session,
-          isLoading: false,
-        }));
+      (event, session) => {
+        console.log('[AuthProvider][Auth Event]', {
+          event,
+          timestamp: new Date().toISOString(),
+          sessionDetails: session ? {
+            userId: session.user?.id,
+            userEmail: session.user?.email,
+            expiresAt: session.expires_at,
+            providerToken: !!session.provider_token,
+            accessToken: !!session.access_token,
+          } : null
+        });
+
+        setState((prev) => {
+          const newState = {
+            ...prev,
+            user: session?.user || null,
+            session,
+            isLoading: false,
+          };
+          console.log('[AuthProvider][State] State update from auth event:', {
+            event,
+            prevState: JSON.stringify(prev, null, 2),
+            newState: JSON.stringify(newState, null, 2),
+            changes: {
+              userChanged: prev.user?.id !== newState.user?.id,
+              sessionChanged: prev.session?.access_token !== newState.session?.access_token,
+              loadingChanged: prev.isLoading !== newState.isLoading,
+            }
+          });
+          return newState;
+        });
       }
     );
 
     return () => {
+      console.log('[AuthProvider][Cleanup] Starting effect cleanup');
       isEffectActive = false;
-      subscription?.unsubscribe();
+      console.log('[AuthProvider][Cleanup] Unsubscribing from auth state changes');
+      subscription.unsubscribe();
+      console.log('[AuthProvider][Cleanup] Cleanup complete');
     };
   }, []);
 
   const signInWithGoogle = async () => {
-    setState((prev) => ({ ...prev, isLoading: true, error: null }));
+    console.log('[AuthProvider][Google Sign-in] Initiating sign-in process');
+    console.log('[AuthProvider][Google Sign-in] Current state:', JSON.stringify(state, null, 2));
+    
+    setState((prev) => {
+      const newState = { ...prev, isLoading: true, error: null };
+      console.log('[AuthProvider][State] Updating state for sign-in start:', {
+        prevState: JSON.stringify(prev, null, 2),
+        newState: JSON.stringify(newState, null, 2)
+      });
+      return newState;
+    });
 
     try {
+      console.log('[AuthProvider][Google Sign-in] Calling supabase.auth.signInWithOAuth');
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${process.env.NEXT_PUBLIC_AUTH_REDIRECT_URL || window.location.origin}/auth/callback`,
+          redirectTo: window.location.origin,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -96,59 +176,96 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
-        console.error('[AuthProvider][Error] Google sign-in error:', {
+        console.error('[AuthProvider][Google Sign-in] OAuth error:', {
           errorMessage: error.message,
-          // errorCode: error.code,
-          // errorStatus: error.status,
+          errorCode: error.code,
+          errorStatus: error.status,
           stack: error.stack
         });
         throw error;
       }
 
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    } catch (error) {
-      console.error('[AuthProvider][Error] Sign-in failed:', {
-        error,
+      console.log('[AuthProvider][Google Sign-in] Sign-in successful:', {
+        hasUrl: !!data.url,
+        redirectUrl: data.url,
         timestamp: new Date().toISOString()
       });
 
-      setState((prev) => ({
-        ...prev,
-        error: error as Error,
-        isLoading: false,
-      }));
+      if (data.url) {
+        console.log('[AuthProvider][Google Sign-in] Redirecting to:', data.url);
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error('[AuthProvider][Google Sign-in] Sign-in failed:', {
+        error,
+        timestamp: new Date().toISOString(),
+        currentState: JSON.stringify(state, null, 2)
+      });
+
+      setState((prev) => {
+        const newState = {
+          ...prev,
+          error: error as Error,
+          isLoading: false,
+        };
+        console.log('[AuthProvider][State] Updating state after sign-in error:', {
+          prevState: JSON.stringify(prev, null, 2),
+          newState: JSON.stringify(newState, null, 2)
+        });
+        return newState;
+      });
     }
   };
 
   const signOut = async () => {
-    setState((prev) => ({ ...prev, isLoading: true, error: null }));
+    console.log('[AuthProvider][Sign-out] Initiating sign-out process');
+    console.log('[AuthProvider][Sign-out] Current state:', JSON.stringify(state, null, 2));
+    
+    setState((prev) => {
+      const newState = { ...prev, isLoading: true, error: null };
+      console.log('[AuthProvider][State] Updating state for sign-out start:', {
+        prevState: JSON.stringify(prev, null, 2),
+        newState: JSON.stringify(newState, null, 2)
+      });
+      return newState;
+    });
+
     try {
+      console.log('[AuthProvider][Sign-out] Calling supabase.auth.signOut');
       const { error } = await supabase.auth.signOut();
+      
       if (error) {
-        console.error('[AuthProvider][Error] Sign-out error:', {
+        console.error('[AuthProvider][Sign-out] Error:', {
           errorMessage: error.message,
-          // errorCode: error.code,
-          // errorStatus: error.status,
+          errorCode: error.code,
+          errorStatus: error.status,
           stack: error.stack
         });
         throw error;
       }
-      // Reset state after sign out
-      setState(initialState);
-      // Optionally redirect or update UI further
-    } catch (error) {
-      console.error('[AuthProvider][Error] Sign-out failed:', {
-        error,
+      
+      console.log('[AuthProvider][Sign-out] Sign-out successful', {
         timestamp: new Date().toISOString()
       });
+    } catch (error) {
+      console.error('[AuthProvider][Sign-out] Sign-out failed:', {
+        error,
+        timestamp: new Date().toISOString(),
+        currentState: JSON.stringify(state, null, 2)
+      });
 
-      setState((prev) => ({
-        ...prev,
-        error: error as Error,
-        isLoading: false,
-      }));
+      setState((prev) => {
+        const newState = {
+          ...prev,
+          error: error as Error,
+          isLoading: false,
+        };
+        console.log('[AuthProvider][State] Updating state after sign-out error:', {
+          prevState: JSON.stringify(prev, null, 2),
+          newState: JSON.stringify(newState, null, 2)
+        });
+        return newState;
+      });
     }
   };
 
@@ -158,14 +275,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signOut,
   };
 
+  console.log('[AuthProvider][Render] Rendering with context value:', {
+    hasUser: !!value.user,
+    hasSession: !!value.session,
+    isLoading: value.isLoading,
+    hasError: !!value.error,
+    timestamp: new Date().toISOString()
+  });
+
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = (): AuthContextType => {
+  console.log('[useAuth] Hook called');
   const context = useContext(AuthContext);
   if (context === undefined) {
-    console.error('[AuthProvider][Error] Hook used outside of AuthProvider context');
+    console.error('[useAuth] Hook used outside of AuthProvider context', {
+      timestamp: new Date().toISOString(),
+      stack: new Error().stack
+    });
     throw new Error('useAuth must be used within an AuthProvider');
   }
+  console.log('[useAuth] Returning context:', {
+    hasUser: !!context.user,
+    hasSession: !!context.session,
+    isLoading: context.isLoading,
+    hasError: !!context.error,
+    timestamp: new Date().toISOString()
+  });
   return context;
-}; 
+};
