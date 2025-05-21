@@ -8,6 +8,11 @@ const nextConfig: NextConfig = {
         hostname: 'img.ebook-hunter.org',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        pathname: '/**',
+      },
     ],
   },
 };

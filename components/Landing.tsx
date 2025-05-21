@@ -16,10 +16,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useIsMobile } from "@/app/hooks/use-mobile";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Landing = () => {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const isMobile = useIsMobile();
+  const { user, signInWithGoogle, signOut } = useAuth();
 
   return (
     <div className="relative">
@@ -57,9 +59,11 @@ const Landing = () => {
               <Button variant="ghost" asChild>
                 <Link to="/about">About</Link>
               </Button>
-              <Button asChild>
-                <Link to="/dashboard">Login</Link>
-              </Button>
+              {user ? (
+                <Button onClick={signOut}>Logout</Button>
+              ) : (
+                <Button onClick={signInWithGoogle}>Login</Button>
+              )}
             </div>
           </div>
         </div>
@@ -77,9 +81,11 @@ const Landing = () => {
               <Button variant="ghost" className="w-full justify-start" asChild>
                 <Link to="/about" onClick={() => setIsMenuOpen(false)}>About</Link>
               </Button>
-              <Button className="w-full justify-start" asChild>
-                <Link to="/dashboard" onClick={() => setIsMenuOpen(false)}>Login</Link>
-              </Button>
+              {user ? (
+                <Button className="w-full justify-start" onClick={() => { signOut(); setIsMenuOpen(false); }}>Logout</Button>
+              ) : (
+                <Button className="w-full justify-start" onClick={() => { signInWithGoogle(); setIsMenuOpen(false); }}>Login</Button>
+              )}
             </div>
           </div>
         )}

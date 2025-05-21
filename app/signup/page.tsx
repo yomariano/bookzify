@@ -2,75 +2,42 @@
 
 import { useState } from 'react'
 import { Button } from "@/components/ui/button"
-import { createClient } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { FcGoogle } from 'react-icons/fc'
-import { useToast } from '@/components/ui/use-toast'
 
 export default function SignUp() {
-  const { toast } = useToast()
   const [loading, setLoading] = useState(false)
-  const supabase = createClient()
+  const { signInWithGoogle } = useAuth()
 
   const handleGoogleSignIn = async () => {
+    setLoading(true)
     try {
-      setLoading(true)
-      
-      // Generate the redirect URL with the current origin
-      const redirectTo = `${window.location.origin}/auth/callback`
-      console.log('Redirecting to:', redirectTo)
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-        },
-      })
-
-      if (error) {
-        toast({
-          title: "Authentication error",
-          description: error.message,
-          variant: "destructive",
-        })
-        throw error
-      }
-      
-      // The user will be redirected to Google for authentication
-      // After successful auth, they'll be redirected back to our callback URL
+      await signInWithGoogle()
     } catch (error) {
-      console.error('Error signing in with Google:', error)
-      toast({
-        title: "Sign in failed",
-        description: "There was a problem signing in with Google. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
+      console.error('Error during Google sign-in:', error)
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50 dark:bg-slate-900">
-      <Card className="w-full max-w-md shadow-lg">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+      <Card className="w-full max-w-md border-border">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Welcome to BookHub</CardTitle>
+          <CardTitle className="text-2xl font-bold">Create your BookHub Account</CardTitle>
           <CardDescription>
-            Your personal library in the cloud
+            Sign in or create an account using Google to continue.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Button 
             variant="outline" 
-            className="w-full py-6 text-base font-medium" 
+            className="w-full" 
             onClick={handleGoogleSignIn}
             disabled={loading}
           >
             <FcGoogle className="mr-2 h-5 w-5" />
-            {loading ? 'Connecting...' : 'Continue with Google'}
+            {loading ? 'Redirecting to Google...' : 'Continue with Google'}
           </Button>
         </CardContent>
         <CardFooter className="flex flex-col space-y-2">

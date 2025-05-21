@@ -1,29 +1,26 @@
-import { createServerClient } from '@/lib/supabase'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { supabase } from '@/lib/supabase';
 
-export const GET = async (request: NextRequest): Promise<NextResponse> => {
-  const requestUrl = new URL(request.url)
-  const code = requestUrl.searchParams.get('code')
-  const next = requestUrl.searchParams.get('next') || '/dashboard'
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const code = searchParams.get('code');
+  const next = searchParams.get('next') || '/'; // Default redirect to home
 
   if (code) {
-    const supabase = createServerClient()
-
-    // Exchange the code for a session
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
-
-    if (error) {
-      console.error('Error exchanging code for session:', error)
-      // Redirect to login page with error
-      return NextResponse.redirect(
-        new URL(`/signup?error=${encodeURIComponent(error.message)}`, requestUrl.origin)
-      )
+    try {
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      if (!error) {
+        return NextResponse.redirect(new URL(next, request.url).toString());
+      }
+      console.error('[AuthCallback][Error] Error exchanging code for session:', error);
+    } catch (e) {
+      console.error('[AuthCallback][Error] Exception during code exchange:', e);
     }
-
-    // On successful authentication, redirect to the dashboard
-    return NextResponse.redirect(new URL(next, requestUrl.origin))
   }
 
-  // No code available, redirect to login
-  return NextResponse.redirect(new URL('/signup', requestUrl.origin))
+  // Fallback redirect to an error page or home if code exchange fails or no code is present
+  const errorUrl = new URL('/auth/error', request.url);
+  errorUrl.searchParams.set('message', 'Authentication failed during callback.');
+  return NextResponse.redirect(errorUrl.toString());
 } 
